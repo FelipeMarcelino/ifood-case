@@ -86,6 +86,7 @@ class DataVisualizer:
 
 
     def plot_histogram_age(self):
+        """Plota a distribuição de idade por perfil."""
         age = self.profile.select(col("age")).toPandas()
 
         plt.figure(figsize=(10, 6))
@@ -97,7 +98,7 @@ class DataVisualizer:
         plt.show()
 
     def plot_histogram_credit_card_limit(self):
-
+        """Plota a distribuição de limite de cartão de crédito por perfil."""
         limit = self.profile.select(col("credit_card_limit")).toPandas()
 
         plt.figure(figsize=(10, 6))
@@ -110,7 +111,7 @@ class DataVisualizer:
 
 
     def plot_barplot_gender(self):
-
+        """Plota a contagem de gênero dentro dos perfis."""
         gender = self.profile.select(col("gender")) \
                              .groupBy("gender").count() \
                              .na.fill({"gender": "Nulo"}).toPandas()
@@ -123,4 +124,21 @@ class DataVisualizer:
         plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
         plt.show()
+
+
+    def plot_barplot_event(self):
+        """Plota a contagem de tipos de events dentro de transações."""
+        event = self.transactions.select(col("event")) \
+                             .groupBy("event").count() \
+                             .na.fill({"event": "Nulo"}).toPandas()
+
+        plt.figure(figsize=(10, 6))
+        sns.barplot(data=event, x="event", y="count", color=IFOOD_RED)
+        plt.title("Contagem de tipos de eventos nas transações", color=IFOOD_BLACK)
+        plt.xlabel("Eventos", color=IFOOD_BLACK)
+        plt.ylabel("Contagem", color=IFOOD_BLACK)
+        plt.xticks(rotation=45, ha="right")
+        plt.tight_layout()
+        plt.show()
+
 
