@@ -20,6 +20,7 @@ pkgs.mkShell {
     pythonPackages.pyspark
     pkgs.pandoc
     pkgs.texliveFull
+    pkgs.jdk11
   ];
   venvDir = "./.venv";
   postVenvCreation = ''
@@ -29,10 +30,11 @@ pkgs.mkShell {
   '';
   postShellHook = ''
     unset SOURCE_DATE_EPOCH
+    export JAVA_HOME=${pkgs.jdk11.home}
+    export PATH="${pkgs.jdk11}/bin:$PATH"
     export LD_LIBRARY_PATH=${
       lib.makeLibraryPath [
         stdenv.cc.cc
-        pkgs.libgcc.lib
       ]
     }:$LD_LIBRARY_PATH
   '';
