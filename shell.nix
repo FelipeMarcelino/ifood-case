@@ -5,7 +5,7 @@
   ...
 }:
 let
-  pythonPackages = pkgs.python312Packages;
+  pythonPackages = pkgs.python313Packages;
 in
 pkgs.mkShell {
   buildInputs = [
@@ -17,12 +17,9 @@ pkgs.mkShell {
     pythonPackages.seaborn
     pythonPackages.openpyxl
     pythonPackages.scikit-learn
-    pythonPackages.lightgbm
-    pythonPackages.optuna
-    pythonPackages.numba
+    pythonPackages.pyspark
     pkgs.pandoc
     pkgs.texliveFull
-
   ];
   venvDir = "./.venv";
   postVenvCreation = ''
@@ -32,6 +29,11 @@ pkgs.mkShell {
   '';
   postShellHook = ''
     unset SOURCE_DATE_EPOCH
-    export LD_LIBRARY_PATH=${lib.makeLibraryPath [ stdenv.cc.cc ]}
+    export LD_LIBRARY_PATH=${
+      lib.makeLibraryPath [
+        stdenv.cc.cc
+        pkgs.libgcc.lib
+      ]
+    }:$LD_LIBRARY_PATH
   '';
 }
