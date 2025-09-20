@@ -95,3 +95,32 @@ class DataVisualizer:
         plt.ylabel("Contagem", color=IFOOD_BLACK)
         plt.tight_layout()
         plt.show()
+
+    def plot_histogram_credit_card_limit(self):
+
+        limit = self.profile.select(col("credit_card_limit")).toPandas()
+
+        plt.figure(figsize=(10, 6))
+        sns.histplot(data=limit, x="credit_card_limit", color=IFOOD_RED)
+        plt.title("Distribuição de limite de cartão de crédito", color=IFOOD_BLACK)
+        plt.xlabel("Limite", color=IFOOD_BLACK)
+        plt.ylabel("Contagem", color=IFOOD_BLACK)
+        plt.tight_layout()
+        plt.show()
+
+
+    def plot_barplot_gender(self):
+
+        gender = self.profile.select(col("gender")) \
+                             .groupBy("gender").count() \
+                             .na.fill({"gender": "Nulo"}).toPandas()
+
+        plt.figure(figsize=(10, 6))
+        sns.barplot(data=gender, x="gender", y="count", color=IFOOD_RED)
+        plt.title("Contagem de perfis de cada gênero", color=IFOOD_BLACK)
+        plt.xlabel("Gênero", color=IFOOD_BLACK)
+        plt.ylabel("Contagem", color=IFOOD_BLACK)
+        plt.xticks(rotation=45, ha="right")
+        plt.tight_layout()
+        plt.show()
+
