@@ -1,9 +1,10 @@
+"""Utils functions used abroad the projects."""
 from pyspark.sql import DataFrame
 
 
 def get_columns_type(df: DataFrame) -> tuple[list[str], list[str]]:
     numerical_types = ["int", "bigint", "float", "double", "decimal", "short", "byte"]
-    exclude = ["account_id", "offer_id", "time_received"]
+    exclude = ["account_id", "offer_id", "time_received", "target"]
 
     numerical_columns = []
     categorical_columns = []
