@@ -27,7 +27,7 @@ class FeatureEngineering:
                 point_in_time_features.alias("p"),
                 on=(
                     (F.col("t.offer_id") == F.col("p.offer_id_received"))
-                    & (F.col("t.account_id") == F.col("p.account_id"))
+                        & (F.col("t.account_id") == F.col("p.account_id"))
                     & (F.col("t.time_received") == F.col("p.time_received"))
                 ),
                 how="left",

@@ -16,6 +16,7 @@ pkgs.mkShell {
     pythonPackages.matplotlib
     pythonPackages.seaborn
     pythonPackages.openpyxl
+    pythonPackages.optuna
     pythonPackages.scikit-learn
     pythonPackages.pyspark
     pkgs.pandoc
