@@ -4,6 +4,8 @@ from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
+from ifood_case.utils import get_columns_type
+
 
 class FeatureEngineering:
     def __init__(self, offers: DataFrame, transactions: DataFrame, profile: DataFrame):
@@ -11,7 +13,7 @@ class FeatureEngineering:
         self.transactions = transactions
         self.profile = profile
 
-    def transform(self):
+    def transform(self) -> tuple[DataFrame, list[str], list[str]]:
         point_in_time_features = self.__point_in_time_features()
         last_offer_features = self.__create_last_offer_viewed_feature()
         profile_features = self.__create_profile_features()
@@ -60,14 +62,32 @@ class FeatureEngineering:
         )
 
         # Quarto join, features de oferta
-        df_final = df_final.alias("f").join(offers_features.alias("o"), on=(F.col("f.offer_id") == F.col("o.id")),
-                                 how="left").drop(F.col("o.id"))
+        df_final = (
+            df_final.alias("f")
+            .join(offers_features.alias("o"), on=(F.col("f.offer_id") == F.col("o.id")), how="left")
+            .drop(F.col("o.id"))
+        )
 
-        return df_final
+        numerical_columns, categorical_columns = get_columns_type(df_final)
 
-    def __clean_age(self):
-        # Substitui o valor de 118 por nulo para o dataset profile
-        self.profile = self.profile.withColumn("age", F.when(F.col("age") == 118, None).otherwise(F.col("age")))
+        return df_final, numerical_columns, categorical_columns
+
+    def __get_columns_type(self, df: DataFrame) -> Tuple[List[str], List[str]]:
+        numerical_types = ["int", "bigint", "float", "double", "decimal", "short", "byte"]
+        exclude = ["account_id", "offer_id", "time_received"]
+
+        numerical_columns = []
+        categorical_columns = []
+
+        for column_name, data_type in df.dtypes:
+            if data_type in numerical_types and column_name not in exclude:
+                numerical_columns.append(column_name)
+            elif data_type not in numerical_columns and column_name not in exclude:
+                categorical_columns.append(column_name)
+            else:
+                print(f"Column {column_name} is {data_type} or is in exclude list: {exclude}")
+
+        return numerical_columns, categorical_columns
 
     def __create_target_variable(self):
         """Função responsável por criar o target do dataset relacionado as ofertas de disconto,
@@ -334,26 +354,36 @@ class FeatureEngineering:
         )
 
         self.profile = self.profile.withColumn(
-            "registration_month", F.month("registration_date"),
+            "registration_month",
+            F.month("registration_date"),
         ).withColumn(
-            "registration_dayofweek", F.dayofweek("registration_date"), # Domingo=1, Sábado=7
+            "registration_dayofweek",
+            F.dayofweek("registration_date"),  # Domingo=1, Sábado=7
         )
 
-        self.profile = self.profile.withColumn(
-            "month_sin",
-            F.sin(2 * math.pi * F.col("registration_month") / 12),
-        ).withColumn(
-            "month_cos",
-            F.cos(2 * math.pi * F.col("registration_month") / 12),
-        ).withColumn(
-            "dayofweek_sin",
-            F.sin(2 * math.pi * F.col("registration_dayofweek") / 7),
-        ).withColumn(
-            "dayofweek_cos",
-            F.cos(2 * math.pi * F.col("registration_dayofweek") / 7),
+        self.profile = (
+            self.profile.withColumn(
+                "month_sin",
+                F.sin(2 * math.pi * F.col("registration_month") / 12),
+            )
+            .withColumn(
+                "month_cos",
+                F.cos(2 * math.pi * F.col("registration_month") / 12),
+            )
+            .withColumn(
+                "dayofweek_sin",
+                F.sin(2 * math.pi * F.col("registration_dayofweek") / 7),
+            )
+            .withColumn(
+                "dayofweek_cos",
+                F.cos(2 * math.pi * F.col("registration_dayofweek") / 7),
+            )
         )
 
         self.profile.drop("registration_date", "registration_month", "registration_dayofweek")
+
+    def __clean_age(self):
+        self.profile = self.profile.withColumn("age", F.when(F.col("age") == 118, None).otherwise(F.col("age")))
 
     def __create_profile_features(self) -> DataFrame:
         self.__clean_age()
