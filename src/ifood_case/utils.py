@@ -3,8 +3,12 @@ separation and model evaluation post-processing.
 """
 from typing import List
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.stat import Correlation
 from pyspark.sql import DataFrame
 
 from ifood_case.evaluator import Evaluator
@@ -122,3 +126,52 @@ def find_optimal_threshold(
     print(best_threshold_row)
 
     return results_df
+
+def plot_correlation_matrix(df: DataFrame, numerical_cols: List[str]) -> None:
+    """Calculates and plots the correlation matrix for the numerical columns
+    of a PySpark DataFrame.
+
+    Parameters
+    ----------
+    df : pyspark.sql.DataFrame
+        The input PySpark DataFrame containing the data.
+    numerical_cols : List[str]
+        A list of the names of the numerical columns to be included in the
+        correlation analysis.
+
+    Returns
+    -------
+    None
+        This function displays a matplotlib plot and does not return any value.
+
+    """
+    assembler = VectorAssembler(
+        inputCols=numerical_cols, outputCol="features_vector", handleInvalid="skip",
+    )
+    vector_df = assembler.transform(df).select("features_vector")
+
+    corr_matrix_spark = Correlation.corr(vector_df, "features_vector").head()
+
+    if corr_matrix_spark:
+        corr_matrix_array = corr_matrix_spark[0].toArray()
+
+        corr_matrix_pd = pd.DataFrame(
+            corr_matrix_array, columns=numerical_cols, index=numerical_cols,
+        )
+
+        # Step 4: Plot the heatmap using Seaborn
+        plt.figure(figsize=(16, 12))
+        sns.heatmap(
+            corr_matrix_pd,
+            annot=True,
+            cmap="coolwarm",
+            fmt=".2f",
+            linewidths=.5,
+        )
+        plt.title("Correlation Matrix of Numerical Features", fontsize=18)
+        plt.xticks(rotation=45, ha="right")
+        plt.yticks(rotation=0)
+        plt.tight_layout()
+        plt.show()
+    else:
+        print("Could not calculate the correlation matrix.")
