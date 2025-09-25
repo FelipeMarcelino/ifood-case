@@ -1,63 +1,125 @@
-"""Utils functions used abroad the projects."""
+"""Utility functions used across the project for tasks such as column type
+separation and model evaluation post-processing.
+"""
+from typing import List
+
 import numpy as np
 import pandas as pd
 from pyspark.sql import DataFrame
 
+# Import your Evaluator class; ensure the path is correct
 from ifood_case.evaluator import Evaluator
 
 
-def get_columns_type(df: DataFrame) -> tuple[list[str], list[str]]:
+def get_column_types(
+    df: DataFrame, exclude_cols: List[str] = None,
+) -> tuple[list[str],list[str]]:
+    """Separates the columns of a PySpark DataFrame into numerical and
+    categorical lists based on their data types.
+
+    Parameters
+    ----------
+    df : pyspark.sql.DataFrame
+        The input PySpark DataFrame to analyze.
+    exclude_cols : List[str], optional
+        A list of column names to exclude from the final lists, such as
+        identifiers or the target variable. By default, it excludes a predefined
+        set of common identifiers.
+
+    Returns
+    -------
+    Tuple[List[str], List[str]]
+        A tuple containing two lists: (numerical_columns, categorical_columns).
+
+    """
+    if exclude_cols is None:
+        exclude_cols = ["account_id", "offer_id", "time_received", "target", "id"]
+
     numerical_types = ["int", "bigint", "float", "double", "decimal", "short", "byte"]
-    exclude = ["account_id", "offer_id", "time_received", "target"]
+    categorical_types = ["string", "boolean"]
 
     numerical_columns = []
     categorical_columns = []
 
     for column_name, data_type in df.dtypes:
-        if data_type in numerical_types and column_name not in exclude:
+        if column_name in exclude_cols:
+            continue
+
+        if data_type in numerical_types:
             numerical_columns.append(column_name)
-        elif data_type not in numerical_columns and column_name not in exclude:
+        elif data_type in categorical_types:
             categorical_columns.append(column_name)
         else:
-            print(f"Column {column_name} is {data_type} or is in exclude list: {exclude}")
+            print(
+                f"Column '{column_name}' with type '{data_type}' was not classified.",
+            )
 
     return numerical_columns, categorical_columns
 
-def find_optimal_threshold(evaluator: Evaluator, y_proba: np.ndarray, avg_conversion_value: float, offer_cost: float):
-    """Testa vários thresholds de probabilidade para encontrar aquele que maximiza o uplift financeiro.
+
+def find_optimal_threshold(
+    evaluator: Evaluator,
+    y_pred_proba: np.ndarray,
+    avg_conversion_value: float,
+    offer_cost: float,
+) -> pd.DataFrame:
+    """Tests various probability thresholds to find the one that maximizes
+    the financial uplift.
+
+    This function iterates through a range of thresholds, calculates the
+    financial outcome for each, and identifies the threshold that yields the
+    highest profit compared to a baseline.
+
+    Parameters
+    ----------
+    evaluator : Evaluator
+        An instantiated Evaluator object containing the true test labels (y_test).
+    y_pred_proba : np.ndarray
+        A 2D numpy array with predicted probabilities from the model.
+        Expected shape is (n_samples, 2).
+    avg_conversion_value : float
+        The estimated average monetary value of a successful conversion.
+    offer_cost : float
+        The estimated cost to send a single offer.
+
+    Returns
+    -------
+    pd.DataFrame
+        A pandas DataFrame detailing the profit and uplift for each tested
+        threshold, sorted by uplift.
+
     """
-    thresholds = np.linspace(0.05, 0.95, 19) # Testa thresholds de 0.05 a 0.95
+    thresholds = np.linspace(0.05, 0.95, 19)  # Test thresholds from 5% to 95%
     results = []
 
-    y_proba_positive_class = y_proba[:, 1]
+    y_proba_positive_class = y_pred_proba[:, 1]
 
     for threshold in thresholds:
-        # Gera predições de classe com base no threshold atual
         y_pred_temp = (y_proba_positive_class >= threshold).astype(int)
 
-        # Calcula o resultado financeiro para este threshold
         financials = evaluator.calculate_financial_uplift(
             y_pred=y_pred_temp,
             avg_conversion_value=avg_conversion_value,
             offer_cost=offer_cost,
         )
 
-        results.append({
-            "threshold": threshold,
-            "model_profit": financials["lucro_com_modelo"],
-            "uplift": financials["uplift_financeiro_(dinheiro_a_mais)"],
-        })
+        results.append(
+            {
+                "threshold": threshold,
+                "model_profit": financials["model_profit"],
+                "financial_uplift": financials["financial_uplift_(extra_profit)"],
+            },
+        )
 
-    # Converte os resultados para um DataFrame Pandas para fácil análise
-    results_df = pd.DataFrame(results)
+    results_df = pd.DataFrame(results).sort_values(
+        by="financial_uplift", ascending=False,
+    )
+    best_threshold_row = results_df.iloc[0]
 
-    # Encontra o melhor threshold
-    best_threshold_row = results_df.loc[results_df["uplift"].idxmax()]
+    print("--- Threshold vs. Uplift Analysis ---")
+    print(results_df.to_string())
 
-    print("Análise de Threshold vs. Uplift:")
-    print(results_df)
-
-    print("\n--- Melhor Threshold Encontrado ---")
+    print("\n--- Best Threshold Found ---")
     print(best_threshold_row)
 
     return results_df

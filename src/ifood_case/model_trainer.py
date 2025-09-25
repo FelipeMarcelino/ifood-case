@@ -153,7 +153,7 @@ class LGBMTrainer(ModelTrainer):
         optuna_search = OptunaSearchCV(
             estimator=pipeline,
             param_distributions=param_distributions,
-            n_trials=200,
+            n_trials=50,
             cv=5,
             scoring="average_precision",
             random_state=42,
