@@ -1,4 +1,7 @@
-"""Módulo responsável por criações das visualizações para insigts sobre os dados."""
+"""This module provides the DataVisualizer class, responsible for creating
+visualizations to gain insights from the iFood case study data.
+"""
+from typing import NoReturn
 
 import matplotlib.pyplot as plt
 import pyspark.sql.functions as F
@@ -6,13 +9,9 @@ import seaborn as sns
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import coalesce, col, concat_ws, explode, floor, when
 
+# --- Brand Color Constants ---
 IFOOD_RED = "#EA1D2C"
 IFOOD_BLACK = "#3F3E3E"
-IFOOD_GRAY_LIGHT = "#E0E0E0"
-IFOOD_ORANGE = "#FF7C00"
-IFOOD_LIGHT_RED = "#F9868D"
-
-
 IFOOD_PALETTE = [
     IFOOD_RED,
     "#FF7043",
@@ -24,34 +23,24 @@ IFOOD_PALETTE = [
 
 
 class DataVisualizer:
-    """Uma classe para criar visualizações a partir de dados de ofertas,
-    transações e perfis de clientes da Starbucks.
+    """A class for creating visualizations from offers, transactions,
+    and customer profile data.
     """
 
     def __init__(self, offers: DataFrame, transactions: DataFrame, profile: DataFrame, df_joined: DataFrame) -> None:
-        """Inicializa o objeto DataVisualizer.
+        """Initializes the DataVisualizer object.
 
         Parameters
         ----------
         offers : pyspark.sql.DataFrame
-            DataFrame com detalhes das ofertas (BOGO, informational, discount).
+            [cite_start]DataFrame with offer details (BOGO, informational, discount). [cite: 20, 21, 23]
         transactions : pyspark.sql.DataFrame
-            DataFrame com o histórico de transações e interações com ofertas.
+            [cite_start]DataFrame with the history of transactions and offer interactions. [cite: 35, 36]
         profile : pyspark.sql.DataFrame
-            DataFrame com os dados demográficos dos clientes.
-        df_joined: pyspark.sql.DataFrame
-            DataFrame com os dados interligado entre si, contendo dados de offers, transactions e profile.
-
-        Attributes
-        ----------
-        offers : pyspark.sql.DataFrame
-            Armazena o DataFrame de ofertas fornecido.
-        transactions : pyspark.sql.DataFrame
-            Armazena o DataFrame de transações fornecido.
-        profile : pyspark.sql.DataFrame
-            Armazena o DataFrame de perfis fornecido.
-        df_joined: pyspark.sql.DataFrame
-            Armazena o DataFrame de dados interligados
+            [cite_start]DataFrame with customer demographic data. [cite: 28, 29]
+        df_joined : pyspark.sql.DataFrame
+            A pre-joined DataFrame containing linked data from offers,
+            transactions, and profiles.
 
         """
         self.offers = offers
@@ -59,12 +48,12 @@ class DataVisualizer:
         self.profile = profile
         self.df_joined = df_joined
 
-    def plot_barplot_channels(self) -> None:
-        """Plota a contagem para a coluna 'channels' de duas formas.
+    def plot_barplot_channels(self) -> NoReturn:
+        """Plots the count for the 'channels' column in two ways.
 
-        Este método serve como um ponto de entrada que chama dois métodos
-        privados para plotar a contagem de combinações de canais e também
-        a contagem de canais individuais.
+        This method serves as an entry point that calls two private methods
+        to plot the count of channel combinations and also the count of
+        individual channels.
 
         Returns
         -------
@@ -74,8 +63,8 @@ class DataVisualizer:
         self.__plot_barplot_channels_joined()
         self.__plot_barplot_channels_separated()
 
-    def __plot_barplot_channels_joined(self) -> None:
-        """Plota a contagem de combinações de canais (ex: 'email, web')."""
+    def __plot_barplot_channels_joined(self) -> NoReturn:
+        """Plots the count of channel combinations (e.g., 'email, web')."""
         channels_pd = (
             self.offers.withColumn("channels_str", concat_ws(", ", col("channels")))
             .groupBy("channels_str")
@@ -86,113 +75,186 @@ class DataVisualizer:
 
         plt.figure(figsize=(10, 6))
         sns.barplot(data=channels_pd, x="channels_str", y="count", color=IFOOD_RED)
-        plt.title("Contagem por Combinação de Canais", color=IFOOD_BLACK)
-        plt.xlabel("Combinação de Canais", color=IFOOD_BLACK)
-        plt.ylabel("Contagem", color=IFOOD_BLACK)
+        plt.title("Count by Channel Combination", color=IFOOD_BLACK)
+        plt.xlabel("Channel Combination", color=IFOOD_BLACK)
+        plt.ylabel("Count", color=IFOOD_BLACK)
         plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
         plt.show()
 
-    def __plot_barplot_channels_separated(self) -> None:
-        """Plota a contagem de cada canal de oferta individualmente."""
-        channels_exploded = self.offers.withColumn("channels_exp", explode(col("channels")))
-        channels_counts = channels_exploded.groupBy("channels_exp").count().orderBy("count", ascending=False)
-        channels_pd = channels_counts.toPandas()
-
-        plt.figure(figsize=(10, 6))
-        sns.barplot(data=channels_pd, x="channels_exp", y="count", color=IFOOD_RED)
-        plt.title("Contagem por Canal Individual", color=IFOOD_BLACK)
-        plt.xlabel("Canal", color=IFOOD_BLACK)
-        plt.ylabel("Contagem", color=IFOOD_BLACK)
-        plt.xticks(rotation=45, ha="right")
-        plt.tight_layout()
-        plt.show()
-
-    def plot_histogram_age(self) -> None:
-        """Plota a distribuição de idade por perfil."""
-        age = self.profile.select(col("age")).toPandas()
-
-        plt.figure(figsize=(10, 6))
-        sns.histplot(data=age, x="age", color=IFOOD_RED)
-        plt.title("Distribuição de idade", color=IFOOD_BLACK)
-        plt.xlabel("Idade", color=IFOOD_BLACK)
-        plt.ylabel("Contagem", color=IFOOD_BLACK)
-        plt.tight_layout()
-        plt.show()
-
-    def plot_histogram_credit_card_limit(self) -> None:
-        """Plota a distribuição de limite de cartão de crédito por perfil."""
-        limit = self.profile.select(col("credit_card_limit")).toPandas()
-
-        plt.figure(figsize=(10, 6))
-        sns.histplot(data=limit, x="credit_card_limit", color=IFOOD_RED)
-        plt.title("Distribuição de limite de cartão de crédito", color=IFOOD_BLACK)
-        plt.xlabel("Limite", color=IFOOD_BLACK)
-        plt.ylabel("Contagem", color=IFOOD_BLACK)
-        plt.tight_layout()
-        plt.show()
-
-    def plot_barplot_gender(self) -> None:
-        """Plota a contagem de gênero dentro dos perfis."""
-        gender = self.profile.select(col("gender")).groupBy("gender").count().na.fill({"gender": "Nulo"}).toPandas()
-
-        plt.figure(figsize=(10, 6))
-        sns.barplot(data=gender, x="gender", y="count", color=IFOOD_RED)
-        plt.title("Contagem de perfis de cada gênero", color=IFOOD_BLACK)
-        plt.xlabel("Gênero", color=IFOOD_BLACK)
-        plt.ylabel("Contagem", color=IFOOD_BLACK)
-        plt.xticks(rotation=45, ha="right")
-        plt.tight_layout()
-        plt.show()
-
-    def plot_barplot_event(self) -> None:
-        """Plota a contagem de tipos de events dentro de transações."""
-        event = self.transactions.select(col("event")).groupBy("event").count().na.fill({"event": "Nulo"}).toPandas()
-
-        plt.figure(figsize=(10, 6))
-        sns.barplot(data=event, x="event", y="count", color=IFOOD_RED)
-        plt.title("Contagem de tipos de eventos nas transações", color=IFOOD_BLACK)
-        plt.xlabel("Eventos", color=IFOOD_BLACK)
-        plt.ylabel("Contagem", color=IFOOD_BLACK)
-        plt.xticks(rotation=45, ha="right")
-        plt.tight_layout()
-        plt.show()
-
-    def plot_histogram_age_credit_card_limit(self) -> None:
-        limit_age = self.profile.select(col("age_group"), col("credit_card_limit")).toPandas()
-
-        plt.figure(figsize=(10, 6))
-        sns.histplot(data=limit_age, x="credit_card_limit", hue="age_group", palette=IFOOD_PALETTE)
-        plt.title("Distribuição de limite de cartão de crédito por idade", color=IFOOD_BLACK)
-        plt.xlabel("Limite", color=IFOOD_BLACK)
-        plt.ylabel("Contagem", color=IFOOD_BLACK)
-        plt.tight_layout()
-        plt.show()
-
-    def plot_histogram_gender_credit_card_limit(self) -> None:
-        limit_gender = (
-            self.profile.select(col("gender"), col("credit_card_limit")).na.fill({"gender": "Nulo"}).toPandas()
+    def __plot_barplot_channels_separated(self) -> NoReturn:
+        """Plots the count of each individual offer channel."""
+        channels_pd = (
+            self.offers.withColumn("channel_exp", explode(col("channels")))
+            .groupBy("channel_exp")
+            .count()
+            .orderBy("count", ascending=False)
+            .toPandas()
         )
 
         plt.figure(figsize=(10, 6))
-        sns.histplot(data=limit_gender, x="credit_card_limit", hue="gender", palette=IFOOD_PALETTE)
-        plt.title("Distribuição de limite de cartão de crédito por gênero", color=IFOOD_BLACK)
-        plt.xlabel("Limite", color=IFOOD_BLACK)
-        plt.ylabel("Contagem", color=IFOOD_BLACK)
+        sns.barplot(data=channels_pd, x="channel_exp", y="count", color=IFOOD_RED)
+        plt.title("Count by Individual Channel", color=IFOOD_BLACK)
+        plt.xlabel("Channel", color=IFOOD_BLACK)
+        plt.ylabel("Count", color=IFOOD_BLACK)
+        plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
         plt.show()
 
-    def plot_offer_effectiveness_by_profile(self) -> None:
-        """Plota a contagem de ofertas completadas por tipo de oferta,
-        segmentado por gênero e faixa etária.
+    def plot_histogram_age(self) -> NoReturn:
+        """[cite_start]Plots the age distribution from the profile data. [cite: 30]
 
-        Esta análise ajuda a identificar quais perfis de clientes são mais
-        receptivos a determinados tipos de oferta.
+        Returns
+        -------
+        None
+
+        """
+        age_pd = self.profile.select(col("age")).toPandas()
+
+        plt.figure(figsize=(10, 6))
+        sns.histplot(data=age_pd, x="age", color=IFOOD_RED)
+        plt.title("Age Distribution", color=IFOOD_BLACK)
+        plt.xlabel("Age", color=IFOOD_BLACK)
+        plt.ylabel("Count", color=IFOOD_BLACK)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_histogram_credit_card_limit(self) -> NoReturn:
+        """[cite_start]Plots the credit card limit distribution from the profile data. [cite: 34]
+
+        Returns
+        -------
+        None
+
+        """
+        limit_pd = self.profile.select(col("credit_card_limit")).toPandas()
+
+        plt.figure(figsize=(10, 6))
+        sns.histplot(data=limit_pd, x="credit_card_limit", color=IFOOD_RED)
+        plt.title("Credit Card Limit Distribution", color=IFOOD_BLACK)
+        plt.xlabel("Limit", color=IFOOD_BLACK)
+        plt.ylabel("Count", color=IFOOD_BLACK)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_barplot_gender(self) -> NoReturn:
+        """[cite_start]Plots the count of each gender in the profile data. [cite: 32]
+
+        Returns
+        -------
+        None
+
+        """
+        gender_pd = (
+            self.profile.select(col("gender"))
+            .groupBy("gender")
+            .count()
+            .na.fill({"gender": "Unknown"})
+            .toPandas()
+        )
+
+        plt.figure(figsize=(10, 6))
+        sns.barplot(data=gender_pd, x="gender", y="count", color=IFOOD_RED)
+        plt.title("Count of Profiles by Gender", color=IFOOD_BLACK)
+        plt.xlabel("Gender", color=IFOOD_BLACK)
+        plt.ylabel("Count", color=IFOOD_BLACK)
+        plt.xticks(rotation=45, ha="right")
+        plt.tight_layout()
+        plt.show()
+
+    def plot_barplot_event(self) -> NoReturn:
+        """[cite_start]Plots the count of each event type in the transactions data. [cite: 37]
+
+        Returns
+        -------
+        None
+
+        """
+        event_pd = (
+            self.transactions.select(col("event"))
+            .groupBy("event")
+            .count()
+            .na.fill({"event": "Unknown"})
+            .toPandas()
+        )
+
+        plt.figure(figsize=(10, 6))
+        sns.barplot(data=event_pd, x="event", y="count", color=IFOOD_RED)
+        plt.title("Count of Event Types in Transactions", color=IFOOD_BLACK)
+        plt.xlabel("Event Type", color=IFOOD_BLACK)
+        plt.ylabel("Count", color=IFOOD_BLACK)
+        plt.xticks(rotation=45, ha="right")
+        plt.tight_layout()
+        plt.show()
+
+    def plot_histogram_age_credit_card_limit(self) -> NoReturn:
+        """Plots the credit card limit distribution segmented by age group.
+
+        Returns
+        -------
+        None
+
+        """
+        limit_age_pd = self.profile.select(
+            col("age_group"), col("credit_card_limit"),
+        ).toPandas()
+
+        plt.figure(figsize=(10, 6))
+        sns.histplot(
+            data=limit_age_pd,
+            x="credit_card_limit",
+            hue="age_group",
+            palette=IFOOD_PALETTE,
+        )
+        plt.title("Credit Card Limit Distribution by Age Group", color=IFOOD_BLACK)
+        plt.xlabel("Limit", color=IFOOD_BLACK)
+        plt.ylabel("Count", color=IFOOD_BLACK)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_histogram_gender_credit_card_limit(self) -> NoReturn:
+        """Plots the credit card limit distribution segmented by gender.
+
+        Returns
+        -------
+        None
+
+        """
+        limit_gender_pd = (
+            self.profile.select(col("gender"), col("credit_card_limit"))
+            .na.fill({"gender": "Unknown"})
+            .toPandas()
+        )
+
+        plt.figure(figsize=(10, 6))
+        sns.histplot(
+            data=limit_gender_pd,
+            x="credit_card_limit",
+            hue="gender",
+            palette=IFOOD_PALETTE,
+        )
+        plt.title("Credit Card Limit Distribution by Gender", color=IFOOD_BLACK)
+        plt.xlabel("Limit", color=IFOOD_BLACK)
+        plt.ylabel("Count", color=IFOOD_BLACK)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_offer_effectiveness_by_profile(self) -> NoReturn:
+        """Plots the count of completed offers by offer type, segmented by
+        gender and age group.
+
+        This analysis helps to identify which customer profiles are more
+        receptive to certain types of offers.
+
+        Returns
+        -------
+        None
+
         """
         completed_offers_pd = (
             self.df_joined.filter(col("event") == "offer completed")
             .withColumn("offer_type_union", coalesce("offer_type_1", "offer_type_2"))
-            .na.fill({"gender": "Nulo"})
+            .na.fill({"gender": "Unknown"})
             .groupBy("offer_type_union", "age_group", "gender")
             .count()
             .orderBy("age_group", "gender")
@@ -211,21 +273,30 @@ class DataVisualizer:
             aspect=1.2,
         )
 
-        g.fig.suptitle("Efetividade da Oferta por Gênero e Faixa Etária", y=1.03, fontsize=16, color=IFOOD_BLACK)
-        g.set_axis_labels("Faixa Etária", "Nº de Ofertas Completadas")
-        g.set_titles("Gênero: {col_name}")
+        g.fig.suptitle(
+            "Offer Effectiveness by Gender and Age Group",
+            y=1.03,
+            fontsize=16,
+            color=IFOOD_BLACK,
+        )
+        g.set_axis_labels("Age Group", "# of Completed Offers")
+        g.set_titles("Gender: {col_name}")
         g.despine(left=True)
         plt.tight_layout()
         plt.show()
 
-    def plot_conversion_rate_by_channel(self) -> None:
-        """Calcula e plota a taxa de conversão (completadas/visualizadas) para
-        cada canal de marketing.
+    def plot_conversion_rate_by_channel(self) -> NoReturn:
+        """Calculates and plots the conversion rate (completed/viewed) for each
+        marketing channel.
 
-        Esta análise é fundamental para otimizar o investimento em marketing,
-        focando nos canais que geram maior retorno.
+        This analysis is key to optimizing marketing investment by focusing
+        on channels that generate the highest return.
+
+        Returns
+        -------
+        None
+
         """
-        # Contagem de ofertas visualizadas por ID
         viewed_counts = (
             self.transactions.filter(col("event") == "offer viewed")
             .groupBy("offer_received_viewed")
@@ -233,7 +304,6 @@ class DataVisualizer:
             .withColumnRenamed("count", "viewed_count")
         )
 
-        # Contagem de ofertas completadas por ID
         completed_counts = (
             self.transactions.filter(col("event") == "offer completed")
             .groupBy("offer_completed")
@@ -241,14 +311,12 @@ class DataVisualizer:
             .withColumnRenamed("count", "completed_count")
         )
 
-        # Juntamos as contagens com os detalhes das ofertas
         conversion_df = (
             self.offers.join(viewed_counts, self.offers.id == viewed_counts.offer_received_viewed, "left")
             .join(completed_counts, self.offers.id == completed_counts.offer_completed, "left")
             .na.fill(0)
         )
 
-        # Explodimos os canais e calculamos a conversão
         conversion_by_channel_pd = (
             conversion_df.withColumn("channel", explode(col("channels")))
             .groupBy("channel")
@@ -256,7 +324,10 @@ class DataVisualizer:
                 F.sum("viewed_count").alias("total_viewed"),
                 F.sum("completed_count").alias("total_completed"),
             )
-            .withColumn("conversion_rate", (col("total_completed") / col("total_viewed")) * 100)
+            .withColumn(
+                "conversion_rate",
+                when(col("total_viewed") > 0, (col("total_completed") / col("total_viewed")) * 100).otherwise(0),
+            )
             .orderBy("conversion_rate", ascending=False)
             .toPandas()
         )
@@ -269,11 +340,10 @@ class DataVisualizer:
             color=IFOOD_RED,
         )
 
-        plt.title("Taxa de Conversão por Canal de Marketing (%)", fontsize=16, color=IFOOD_BLACK)
-        plt.xlabel("Canal", fontsize=12, color=IFOOD_BLACK)
-        plt.ylabel("Taxa de Conversão (%)", fontsize=12, color=IFOOD_BLACK)
+        plt.title("Conversion Rate by Marketing Channel (%)", fontsize=16, color=IFOOD_BLACK)
+        plt.xlabel("Channel", fontsize=12, color=IFOOD_BLACK)
+        plt.ylabel("Conversion Rate (%)", fontsize=12, color=IFOOD_BLACK)
 
-        # Adicionar rótulos de dados nas barras
         for p in ax.patches:
             ax.annotate(
                 f"{p.get_height():.1f}%",
@@ -285,17 +355,22 @@ class DataVisualizer:
                 color=IFOOD_BLACK,
             )
 
-        plt.ylim(0, max(conversion_by_channel_pd["conversion_rate"]) * 1.15)
+        if not conversion_by_channel_pd.empty:
+            plt.ylim(0, max(conversion_by_channel_pd["conversion_rate"]) * 1.15)
         plt.tight_layout()
         plt.show()
 
-    def plot_transaction_value_by_offer_usage(self) -> None:
-        """Compara a distribuição do valor das transações (ticket médio) entre
-        clientes que completaram ofertas e os que não completaram.
+    def plot_transaction_value_by_offer_usage(self) -> NoReturn:
+        """Compares the transaction value distribution (ticket size) between
+        customers who have completed offers and those who have not.
 
-        Essa análise avalia o impacto das ofertas no comportamento de gastos do cliente.
+        This analysis assesses the impact of offers on customer spending behavior.
+
+        Returns
+        -------
+        None
+
         """
-        # Identificar clientes que completaram pelo menos uma oferta
         users_who_completed = (
             self.transactions.filter(col("event") == "offer completed")
             .select("account_id")
@@ -303,50 +378,50 @@ class DataVisualizer:
             .withColumn("completed_offer", F.lit(True))
         )
 
-        # Pegar apenas as transações (que têm valor de 'amount')
         transactions_only = self.transactions.filter(col("event") == "transaction")
 
-        # Juntar para saber se a transação foi de um usuário que completa ofertas
-        transactions_with_user_type = (
-            transactions_only.join(
-                users_who_completed,
-                "account_id",
-                "left",
-            )
+        transactions_with_user_type_pd = (
+            transactions_only.join(users_who_completed, "account_id", "left")
             .na.fill({"completed_offer": False})
-            .withColumn("user_type", when(col("completed_offer") == True, "Usa Ofertas").otherwise("Não Usa Ofertas"))
+            .withColumn("user_type", when(col("completed_offer") == True, "Uses Offers").otherwise("Does Not Use Offers"))
             .toPandas()
         )
 
         plt.figure(figsize=(10, 8))
         sns.histplot(
-            data=transactions_with_user_type,
+            data=transactions_with_user_type_pd,
             x="amount",
-            hue="user_type",  # Cria um histograma para cada tipo de usuário
+            hue="user_type",
             palette=[IFOOD_RED, IFOOD_BLACK],
-            log_scale=True,  # A MÁGICA ACONTECE AQUI!
-            element="step",  # Estilo de plotagem para sobreposição
+            log_scale=True,
+            element="step",
             kde=True,
-        )  # Adiciona uma linha de densidade para suavizar
-        plt.title("Distribuição do Valor da Transação (Escala Log)", fontsize=16, color=IFOOD_BLACK)
-        plt.xlabel("Valor da Transação (R$) - Escala Logarítmica", fontsize=12, color=IFOOD_BLACK)
-        plt.ylabel("Contagem", fontsize=12, color=IFOOD_BLACK)
+        )
+        plt.title("Transaction Value Distribution (Log Scale)", fontsize=16, color=IFOOD_BLACK)
+        plt.xlabel("Transaction Value ($) - Log Scale", fontsize=12, color=IFOOD_BLACK)
+        plt.ylabel("Count", fontsize=12, color=IFOOD_BLACK)
         plt.tight_layout()
         plt.show()
 
+    def plot_informational_offer_impact(self) -> NoReturn:
+        """Analyzes and plots the impact of informational offers on transaction
+        value, removing outliers for better visualization clarity.
 
-    def plot_informational_offer_impact(self) -> None:
-        """Analisa e plota o impacto das ofertas informacionais no valor das transações,
-        removendo outliers para melhor clareza da visualização.
+        Returns
+        -------
+        None
+
         """
-        # 1. A lógica de preparação de dados em PySpark continua a mesma
         informational_offer_ids = [
-            row.id for row in self.offers.filter(col("offer_type") == "informational").select("id").collect()
+            row.id
+            for row in self.offers.filter(col("offer_type") == "informational")
+            .select("id")
+            .collect()
         ]
         info_views_df = (
             self.transactions.filter(
-                (col("event") == "offer viewed") &
-                (col("offer_received_viewed").isin(informational_offer_ids)),
+                (col("event") == "offer viewed")
+                & (col("offer_received_viewed").isin(informational_offer_ids)),
             )
             .alias("v")
             .join(self.offers.alias("o"), col("v.offer_received_viewed") == col("o.id"))
@@ -356,48 +431,48 @@ class DataVisualizer:
                 col("o.duration"),
             )
         )
-        transactions_df = self.transactions.filter(col("event") == "transaction").alias("t")
+        transactions_df = self.transactions.filter(
+            col("event") == "transaction",
+        ).alias("t")
         influenced_transactions = info_views_df.join(
             transactions_df,
             info_views_df.account_id == transactions_df.account_id,
             "inner",
         ).filter(
-            (col("t.time_since_test_start") >= col("view_time")) &
-            (col("t.time_since_test_start") <= col("view_time") + col("duration")),
+            (col("t.time_since_test_start") >= col("view_time"))
+            & (col("t.time_since_test_start") <= col("view_time") + col("duration")),
         )
-        final_df = (
-            influenced_transactions
-            .join(self.profile, on=col("t.account_id") == self.profile.id, how="left")
-            .select(
-                col("t.account_id").alias("account_id"),
-                "gender",
-                "age_group",
-                "amount",
-            ).na.fill({"gender":"Nulo"})
-        )
+        final_df = influenced_transactions.join(
+            self.profile, on=col("t.account_id") == self.profile.id, how="left",
+        ).select(
+            col("t.account_id").alias("account_id"),
+            "gender",
+            "age_group",
+            "amount",
+        ).na.fill({"gender": "Unknown"})
 
-        # 2. Coletar o resultado para o Pandas
         plot_data_pd = final_df.toPandas()
 
+        if plot_data_pd.empty:
+            print("No transactions influenced by informational offers were found.")
+            return
 
-
-        # --- NOVO: Lógica para Remover Outliers por Grupo (age_group, gender) ---
-        # Calcula Q1 e Q3 para cada grupo
-        Q1 = plot_data_pd.groupby(["age_group", "gender"])["amount"].transform(lambda x: x.quantile(0.25))
-        Q3 = plot_data_pd.groupby(["age_group", "gender"])["amount"].transform(lambda x: x.quantile(0.75))
+        Q1 = plot_data_pd.groupby(["age_group", "gender"])["amount"].transform(
+            lambda x: x.quantile(0.25),
+        )
+        Q3 = plot_data_pd.groupby(["age_group", "gender"])["amount"].transform(
+            lambda x: x.quantile(0.75),
+        )
         IQR = Q3 - Q1
-
-        # Define os limites inferior e superior
         lower_bound = Q1 - 1.5 * IQR
         upper_bound = Q3 + 1.5 * IQR
+        df_plot_no_outliers = plot_data_pd[
+            (plot_data_pd["amount"] >= lower_bound)
+            & (plot_data_pd["amount"] <= upper_bound)
+        ]
 
-        # Filtra o DataFrame original
-        df_plot_no_outliers = plot_data_pd[(plot_data_pd["amount"] >= lower_bound) & (plot_data_pd["amount"] <= upper_bound)]
-        # --- FIM DA SEÇÃO DE REMOÇÃO DE OUTLIERS ---
-
-        # 3. Plotar o gráfico com o DataFrame FILTRADO
         g = sns.catplot(
-            data=df_plot_no_outliers, # Usando o DataFrame filtrado
+            data=df_plot_no_outliers,
             x="age_group",
             y="amount",
             hue="gender",
@@ -405,47 +480,48 @@ class DataVisualizer:
             palette=IFOOD_PALETTE,
             height=7,
             aspect=1.5,
-            order=["18-25", "26-35", "36-50", "51+" ],
+            order=["18-25", "26-35", "36-50", "51+"],
         )
 
-        g.fig.suptitle("Valor Gasto em Transações Pós-Oferta Informativa (sem Outliers)", y=1.03, fontsize=18)
-        g.set_axis_labels("Faixa Etária", "Valor da Transação (R$)")
-        g._legend.set_title("Gênero")
+        g.fig.suptitle(
+            "Transaction Value After Informational Offer (Outliers Removed)",
+            y=1.03,
+            fontsize=18,
+        )
+        g.set_axis_labels("Age Group", "Transaction Value ($)")
+        g._legend.set_title("Gender")
         g.despine(left=True)
         plt.tight_layout()
         plt.show()
 
-    def plot_engagement_over_time_by_profile(self) -> None:
-        """Analisa e plota a evolução do engajamento com ofertas (visualizadas e
-        completadas) ao longo do tempo (em semanas), segmentado por perfil de
-        cliente (gênero e faixa etária).
+    def plot_engagement_over_time_by_profile(self) -> NoReturn:
+        """Analyzes and plots the evolution of offer engagement (viewed and
+        completed) over time (in weeks), segmented by customer profile.
 
-        Esta análise temporal ajuda a identificar tendências, picos de atividade
-        e possível fadiga de diferentes segmentos de clientes.
+        This temporal analysis helps identify trends, activity peaks, and
+        potential fatigue among different customer segments.
+
+        Returns
+        -------
+        None
+
         """
-        print("Iniciando a análise de engajamento temporal por perfil...")
+        print("Starting temporal engagement analysis by profile...")
 
-        # 1. Usar o DataFrame mestre com os dados de perfil já unidos
-        #    e filtrar apenas eventos de oferta.
         offer_events = self.df_joined.filter(
             col("event").isin("offer viewed", "offer completed"),
         )
 
-        # 2. Binarizar o tempo em semanas para suavizar o gráfico.
-        #    (time_since_test_start está em dias, então dividimos por 7)
         events_by_week = offer_events.withColumn(
             "week", floor(col("time_since_test_start") / 7),
         )
 
-        # 3. Preparar dados para o plot por GÊNERO
         engagement_by_gender_pd = (
             events_by_week.groupBy("week", "gender", "event")
             .count()
             .orderBy("week", "gender")
             .toPandas()
         )
-
-        # 4. Preparar dados para o plot por FAIXA ETÁRIA
         engagement_by_age_pd = (
             events_by_week.groupBy("week", "age_group", "event")
             .count()
@@ -453,41 +529,39 @@ class DataVisualizer:
             .toPandas()
         )
 
-        # --- Plot 1: Engajamento ao Longo do Tempo por Gênero ---
         plt.figure(figsize=(15, 8))
         sns.lineplot(
             data=engagement_by_gender_pd,
             x="week",
             y="count",
-            hue="gender",  # Uma cor de linha para cada gênero
-            style="event", # Um estilo de linha para 'viewed' vs 'completed'
+            hue="gender",
+            style="event",
             palette=IFOOD_PALETTE,
             linewidth=2.5,
         )
-        plt.title("Evolução do Engajamento com Ofertas por Gênero", fontsize=18, color=IFOOD_BLACK)
-        plt.xlabel("Semana do Teste", fontsize=14, color=IFOOD_BLACK)
-        plt.ylabel("Número de Eventos", fontsize=14, color=IFOOD_BLACK)
-        plt.legend(title="Legenda")
+        plt.title("Offer Engagement Evolution by Gender", fontsize=18, color=IFOOD_BLACK)
+        plt.xlabel("Week of Test", fontsize=14, color=IFOOD_BLACK)
+        plt.ylabel("Number of Events", fontsize=14, color=IFOOD_BLACK)
+        plt.legend(title="Legend")
         plt.grid(axis="y", linestyle="--", alpha=0.7)
         plt.tight_layout()
         plt.show()
 
-        # --- Plot 2: Engajamento ao Longo do Tempo por Faixa Etária ---
         plt.figure(figsize=(15, 8))
         sns.lineplot(
             data=engagement_by_age_pd,
             x="week",
             y="count",
-            hue="age_group", # Uma cor de linha para cada faixa etária
+            hue="age_group",
             style="event",
             palette=IFOOD_PALETTE,
             linewidth=2.5,
-            hue_order=["18-25", "26-35", "36-50", "51+" ],
+            hue_order=["18-25", "26-35", "36-50", "51+"],
         )
-        plt.title("Evolução do Engajamento com Ofertas por Faixa Etária", fontsize=18, color=IFOOD_BLACK)
-        plt.xlabel("Semana do Teste", fontsize=14, color=IFOOD_BLACK)
-        plt.ylabel("Número de Eventos", fontsize=14, color=IFOOD_BLACK)
-        plt.legend(title="Legenda")
+        plt.title("Offer Engagement Evolution by Age Group", fontsize=18, color=IFOOD_BLACK)
+        plt.xlabel("Week of Test", fontsize=14, color=IFOOD_BLACK)
+        plt.ylabel("Number of Events", fontsize=14, color=IFOOD_BLACK)
+        plt.legend(title="Legend")
         plt.grid(axis="y", linestyle="--", alpha=0.7)
         plt.tight_layout()
         plt.show()
