@@ -261,12 +261,6 @@ class FeatureEngineering:
         """Para cada oportunidade de oferta, encontra qual foi a última oferta visualizada
         pelo cliente antes daquela oportunidade.
 
-        Parameters
-        ----------
-        transactions_parsed : pyspark.sql.DataFrame
-            O log de todas as transações e eventos de oferta.
-        opportunities : pyspark.sql.DataFrame
-            DataFrame base com (account_id, offer_id_received, time_received).
 
         Returns
         -------

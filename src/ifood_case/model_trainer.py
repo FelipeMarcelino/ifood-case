@@ -68,7 +68,7 @@ class ModelTrainer(ABC):
         self._calibrator = IsotonicRegression(y_min=0, y_max=1, out_of_bounds="clip")
         self._calibrator.fit(uncalibrated_probs, y_calib)
 
-        return x_test, y_test
+        return x_train, x_test, y_train, y_test
 
     def _split_data(self) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]:
         window_spec = Window.partitionBy("account_id")
@@ -146,8 +146,8 @@ class LGBMTrainer(ModelTrainer):
         optuna_search = OptunaSearchCV(
             estimator=pipeline,
             param_distributions=param_distributions,
-            n_trials=50,
-            cv=3,
+            n_trials=200,
+            cv=5,
             scoring="average_precision",
             random_state=42,
             verbose=0,
