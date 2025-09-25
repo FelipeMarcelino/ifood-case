@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import shap
 from sklearn.metrics import (
     average_precision_score,
     classification_report,
@@ -16,6 +17,7 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
+from sklearn.pipeline import Pipeline
 
 # --- Brand Color Constants ---
 IFOOD_RED = "#EA1D2C"
@@ -29,16 +31,19 @@ class Evaluator:
     ROC AUC curve, PR AUC curve, and financial uplift.
     """
 
-    def __init__(self, y_test: pd.Series):
+    def __init__(self, x_test: pd.DataFrame, y_test: pd.Series):
         """Initialize the Evaluator with the ground truth labels.
 
         Parameters
         ----------
         y_test : pd.Series
             The true target values for the test set.
+        y_test : pd.DataFrame
+            The dataframe containing the features 
 
         """
         self._y_test = y_test
+        self._x_test = x_test
 
     def report(
         self,
@@ -272,3 +277,42 @@ class Evaluator:
         }
 
         return financial_report
+
+    def plot_shap_summary(self, model: Pipeline, top_n: int = 15) -> None:
+        """Calculates and plots the SHAP summary plot to show feature importance
+        and impact on the model's output.
+
+        Parameters
+        ----------
+        model : sklearn.pipeline.Pipeline
+            The trained scikit-learn pipeline, which must contain a
+            preprocessor step and a tree-based classifier step.
+        top_n : int, optional
+            The number of top features to display on the plot, by default 15.
+
+        Returns
+        -------
+        None
+
+        """
+        preprocessor = model.named_steps["preprocess"]
+        classifier = model.named_steps["classifier"]
+
+        x_test_transformed = preprocessor.transform(self._x_test)
+
+        feature_names = preprocessor.get_feature_names_out()
+
+        x_test_transformed_df = pd.DataFrame(x_test_transformed, columns=feature_names)
+
+        explainer = shap.TreeExplainer(classifier)
+        shap_values = explainer.shap_values(x_test_transformed_df)
+
+        shap.summary_plot(
+            shap_values,
+            x_test_transformed_df,
+            max_display=top_n,
+            show=False,
+        )
+        plt.title(f"Top {top_n} Features - SHAP Summary Plot", fontsize=16)
+        plt.tight_layout()
+        plt.show()

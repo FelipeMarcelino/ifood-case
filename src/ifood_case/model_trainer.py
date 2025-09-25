@@ -14,7 +14,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.isotonic import IsotonicRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 optuna.logging.disable_default_handler()
 
@@ -43,6 +43,13 @@ class ModelTrainer(ABC):
         if self._best_score is None:
             raise RuntimeError("Model not tuned yet. Call train() first")
         return self._best_score
+
+    @property
+    def estimator(self):
+        if self._estimator is None:
+            raise RuntimeError("Model not tuned yet. Call train() first")
+        return self._estimator
+
 
     def predict(self, df: pd.DataFrame, threshold: float = 0.5):
         calibrated_probs_pos = self.predict_proba(df)[:, 1]
@@ -109,8 +116,10 @@ class ModelTrainer(ABC):
     def _create_pipeline(self) -> Pipeline:
         preprocessor = ColumnTransformer(
             transformers=[
+                ("numerical", StandardScaler(), self._numerical_columns),
                 ("categorical", OneHotEncoder(), self._categorical_columns),
             ],
+            remainder="passthrough",
         )
         pipeline = Pipeline(
             steps=[

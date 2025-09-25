@@ -19,6 +19,7 @@ pkgs.mkShell {
     pythonPackages.optuna
     pythonPackages.scikit-learn
     pythonPackages.pyspark
+    pythonPackages.shap
     pkgs.pandoc
     pkgs.texliveFull
     pkgs.jdk11
