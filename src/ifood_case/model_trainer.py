@@ -3,6 +3,7 @@ from typing import Optional
 
 import lightgbm as lgb
 import numpy as np
+import optuna
 import pandas as pd
 from optuna.distributions import FloatDistribution, IntDistribution
 from optuna.integration import OptunaSearchCV
@@ -14,6 +15,10 @@ from sklearn.isotonic import IsotonicRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+
+optuna.logging.disable_default_handler()
+
+
 
 
 class ModelTrainer(ABC):
@@ -143,6 +148,8 @@ class LGBMTrainer(ModelTrainer):
             "classifier__reg_lambda": FloatDistribution(0.0, 1.0),  # L2 regularization
         }
 
+        pipeline.set_params(classifier__verbose=-1)
+
         optuna_search = OptunaSearchCV(
             estimator=pipeline,
             param_distributions=param_distributions,
@@ -150,7 +157,7 @@ class LGBMTrainer(ModelTrainer):
             cv=5,
             scoring="average_precision",
             random_state=42,
-            verbose=0,
+            verbose=-1,
         )
 
         optuna_search.fit(x_train, y_train)
