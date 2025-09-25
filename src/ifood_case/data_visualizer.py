@@ -102,7 +102,7 @@ class DataVisualizer:
         plt.show()
 
     def plot_histogram_age(self) -> NoReturn:
-        """[cite_start]Plots the age distribution from the profile data. [cite: 30]
+        """Plots the age distribution from the profile data. [cite: 30]
 
         Returns
         -------
@@ -120,7 +120,7 @@ class DataVisualizer:
         plt.show()
 
     def plot_histogram_credit_card_limit(self) -> NoReturn:
-        """[cite_start]Plots the credit card limit distribution from the profile data. [cite: 34]
+        """Plots the credit card limit distribution from the profile data. [cite: 34]
 
         Returns
         -------
@@ -138,7 +138,7 @@ class DataVisualizer:
         plt.show()
 
     def plot_barplot_gender(self) -> NoReturn:
-        """[cite_start]Plots the count of each gender in the profile data. [cite: 32]
+        """Plots the count of each gender in the profile data. [cite: 32]
 
         Returns
         -------
@@ -163,7 +163,7 @@ class DataVisualizer:
         plt.show()
 
     def plot_barplot_event(self) -> NoReturn:
-        """[cite_start]Plots the count of each event type in the transactions data. [cite: 37]
+        """Plots the count of each event type in the transactions data. [cite: 37]
 
         Returns
         -------

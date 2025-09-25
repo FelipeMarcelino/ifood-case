@@ -59,7 +59,7 @@ class ModelTrainer(ABC):
 
         return np.vstack([1 - calibrated_probs_pos, calibrated_probs_pos]).T
 
-    def train(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def train(self) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         x_train, x_test, x_calib, y_train, y_test, y_calib = self._split_data()
         pipeline = self._create_pipeline()
         optuna_search = self._tune_model(pipeline, x_train, y_train)

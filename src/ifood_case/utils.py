@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from pyspark.sql import DataFrame
 
-# Import your Evaluator class; ensure the path is correct
 from ifood_case.evaluator import Evaluator
 
 
