@@ -15,16 +15,6 @@ class DataProcessing:
     This class takes the raw offers, transactions, and profile DataFrames,
     applies cleaning and transformation logic, and joins them into a
     single unified DataFrame.
-
-    Attributes
-    ----------
-    offers : pyspark.sql.DataFrame
-        The raw DataFrame containing offer details.
-    transactions : pyspark.sql.DataFrame
-        The raw DataFrame containing the log of all events.
-    profile : pyspark.sql.DataFrame
-        The raw DataFrame containing customer profile data.
-
     """
 
     def __init__(self, offers: DataFrame, transactions: DataFrame, profile: DataFrame) -> None:
