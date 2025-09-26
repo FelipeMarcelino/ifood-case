@@ -11,9 +11,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import joblib
+import numpy as np
 import pandas as pd
 from pyspark.sql import DataFrame, SparkSession
 
+from ifood_case.data_processing import DataProcessing
 from ifood_case.evaluator import Evaluator
 from ifood_case.feature_engineering import FeatureEngineering
 from ifood_case.model_trainer import LGBMTrainer, ModelTrainer
@@ -42,6 +44,7 @@ class TrainingPipeline:
         self.project_root = Path(__file__).resolve().parent.parent.parent
         self.data_path = self.project_root / data_path
         self.feature_engineer: FeatureEngineering = None
+        self.data_processing: DataProcessing = None
         self.model_trainer: ModelTrainer = None
         self.evaluator: Evaluator = None
         self.numerical_cols: List[str] = []
@@ -70,6 +73,11 @@ class TrainingPipeline:
 
         # 1. Load Data
         offers, transactions, profile = self._load_data()
+
+        # Preprocessing
+        self.data_processing = DataProcessing(offers, transactions, profile)
+        df_joined, offers, transactions, profile = self.data_processing.transform()
+
 
         # 2. Feature Engineering
         self.feature_engineer = FeatureEngineering(offers, transactions, profile)
@@ -141,7 +149,7 @@ class TrainingPipeline:
         metrics = self.evaluator.report(y_pred=predictions, y_pred_proba=probabilities)
 
         json_output_path = self.project_root / "models" / f"evaluation_metrics_{model_version}.json"
-        with open(json_output_path) as f:
+        with open(json_output_path,"w+") as f:
             json.dump(metrics, f, indent=4)
 
         logger.info("--- Model Evaluation Finished ---")

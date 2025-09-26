@@ -1,16 +1,14 @@
-
+import argparse
 import logging
 
 import pandas as pd
-from pyspark import SparkSession
+from pyspark.sql import SparkSession
 
 from ifood_case.logger_config import setup_logging
 from ifood_case.pipeline import TrainingPipeline
 
 
 def main():
-
-
     parser = argparse.ArgumentParser(description="Main pipeline for the iFood case study.")
 
     # Create a mutually exclusive group: you can either train OR predict, not both.
@@ -39,12 +37,15 @@ def main():
     setup_logging()
     logger = logging.getLogger()
 
-
-
     if args.train:
         logger.info("Starting execution in --train mode")
 
-        spark = SparkSession.builder.appName("IfoodTrainingRun").getOrCreate()
+        spark = (
+            SparkSession.builder.appName("IfoodTrainingRun")
+            .config("spark.driver.memory", "4g")  # Example: 4 gigabytes for the driver
+            .config("spark.executor.memory", "8g")  # Example: 8 gigabytes for each executor
+            .getOrCreate()
+        )
         spark.sparkContext.setLogLevel("ERROR")
 
         pipeline = TrainingPipeline(spark)
@@ -78,6 +79,7 @@ def main():
             logger.error(f"Input file not found at: {args.predict}")
         except Exception as e:
             logger.error(f"An error occurred during prediction: {e}", exc_info=True)
+
 
 if __name__ == "__main__":
     main()
