@@ -53,7 +53,7 @@ Siga os passos abaixo para configurar o ambiente e instalar todas as dependênci
     Navegue até o diretório onde deseja salvar o projeto e clone o repositório do GitHub.
 
     ```bash
-    git clone <URL_DO_SEU_REPOSITORIO>
+    git clone https://github.com/FelipeMarcelino/ifood-case.git
     cd ifood-case
     ```
 
