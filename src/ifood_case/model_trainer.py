@@ -32,18 +32,6 @@ class ModelTrainer(ABC):
     This class defines a standard workflow for splitting data, creating a
     preprocessing pipeline, tuning hyperparameters, training a final model,
     and applying isotonic calibration.
-
-    Attributes
-    ----------
-    _df : pyspark.sql.DataFrame
-        The full feature-engineered DataFrame.
-    _numerical_columns : List[str]
-        List of numerical feature column names.
-    _categorical_columns : List[str]
-        List of categorical feature column names.
-    _target : str
-        The name of the target variable column.
-
     """
 
     def __init__(self, df: DataFrame, numerical_columns: List[str], categorical_columns: List[str], target: str):
