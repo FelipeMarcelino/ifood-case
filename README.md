@@ -14,6 +14,7 @@ ifood-case/
 ├── notebooks/
 │   ├── 1_data_processing.ipynb  # Notebook para análise exploratória e visualização
 │   └── 2_modeling.ipynb         # Notebook para engenharia de features, treino e avaliação do modelo
+├── case/ # Contém o case do desafio técnico
 ├── src/
 │   └── ifood_case/   # Pacote Python com o código fonte modularizado
 │       ├── data_processing.py
@@ -21,7 +22,10 @@ ifood-case/
 │       ├── model_trainer.py
 │       ├── evaluator.py
 │       └── ...
+│       └── ...
+│       └── ...
 ├── logs/             # Pasta onde os logs de execução são salvos
+├── presentation/     # Pasta onde está a apresentação
 ├── requirements.txt  # Lista de dependências Python
 ├── setup.py          # Script para instalar o pacote local 'ifood_case'
 └── README.md         # Este arquivo
