@@ -2,6 +2,7 @@
 visualizing performance metrics for a binary classification model.
 """
 
+import logging
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -19,7 +20,8 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 
-# --- Brand Color Constants ---
+logger= logging.getLogger(__name__)
+
 IFOOD_RED = "#EA1D2C"
 IFOOD_BLACK = "#3F3E3E"
 
@@ -44,6 +46,7 @@ class Evaluator:
         """
         self._y_test = y_test
         self._x_test = x_test
+        logger.info(f"Evaluator initialized with {len(self._y_test)} test samples.")
 
     def report(
         self,
@@ -68,6 +71,7 @@ class Evaluator:
             A dictionary containing all calculated performance metrics.
 
         """
+        logger.info("Generating full evaluation report...")
         metrics = {}
 
         # Calculate ROC AUC and PR AUC from probabilities
@@ -76,6 +80,7 @@ class Evaluator:
             average_precision_score(self._y_test, y_pred_proba[:, 1]),
             4,
         )
+        logger.debug(f"Calculated AUC scores: ROC AUC = {metrics['roc_auc']}, PR AUC = {metrics['pr_auc']}")
 
         # Calculate real vs. model conversion rates
         metrics["actual_conversion_rate_test (%)"] = round(
@@ -92,6 +97,7 @@ class Evaluator:
             elif isinstance(value, float):
                 report_dict[key] = round(value, 4)
         metrics["classification_report"] = report_dict
+        logger.info("Classification report generated.")
 
         # Generate plots
         self.__plot_confusion_matrix(y_pred)
@@ -109,6 +115,7 @@ class Evaluator:
             The predicted class labels (0 or 1) from the model.
 
         """
+        logger.info("Plotting confusion matrix...")
         cm = confusion_matrix(self._y_test, y_pred)
 
         group_names = [
@@ -144,6 +151,7 @@ class Evaluator:
             The pre-calculated PR AUC score to display in the legend.
 
         """
+        logger.info("Plotting Precision-Recall curve...")
         precision, recall, _ = precision_recall_curve(
             self._y_test,
             y_proba_positive_class,
@@ -191,6 +199,7 @@ class Evaluator:
             The pre-calculated ROC AUC score to display in the legend.
 
         """
+        logger.info("Plotting ROC Curve...")
         fpr, tpr, _ = roc_curve(self._y_test, y_proba_positive_class)
 
         plt.figure(figsize=(10, 8))
@@ -244,6 +253,8 @@ class Evaluator:
             the baseline, and the calculated uplift.
 
         """
+        logger.info("Calculating financial uplift...")
+        logger.debug(f"Uplift params: avg_conversion_value=${avg_conversion_value:.2f}, offer_cost=${offer_cost:.2f}")
         cm = confusion_matrix(self._y_test, y_pred)
         _, fp, _, tp = cm.flatten()
 
@@ -276,6 +287,7 @@ class Evaluator:
             ),
         }
 
+        logger.info(f"Financial Uplift Calculated: ${uplift:.2f}")
         return financial_report
 
     def plot_shap_summary(self, model: Pipeline, top_n: int = 15) -> None:
@@ -295,18 +307,22 @@ class Evaluator:
         None
 
         """
+        logger.info("Starting SHAP summary plot generation...")
         preprocessor = model.named_steps["preprocess"]
         classifier = model.named_steps["classifier"]
 
+        logger.info("Transform test data for SHAP analysis.")
         x_test_transformed = preprocessor.transform(self._x_test)
 
         feature_names = preprocessor.get_feature_names_out()
 
         x_test_transformed_df = pd.DataFrame(x_test_transformed, columns=feature_names)
 
+        logger.info("Calculating SHAP values...(this may take a moment)")
         explainer = shap.TreeExplainer(classifier)
         shap_values = explainer.shap_values(x_test_transformed_df)
 
+        logger.info("Plotting SHAP summary...")
         shap.summary_plot(
             shap_values,
             x_test_transformed_df,

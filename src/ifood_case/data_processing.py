@@ -1,11 +1,13 @@
 """This module provides the DataProcessing class, responsible for cleaning,
 restructuring, and joining the raw iFood case study DataFrames.
 """
+import logging
 from typing import Tuple
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, when
 
+logger = logging.getLogger(__name__)
 
 class DataProcessing:
     """Orchestrates the initial data processing and joining pipeline.
@@ -41,6 +43,7 @@ class DataProcessing:
         self._offers = offers
         self._transactions = transactions
         self._profile = profile
+        logger.info("DataProcessing class initialize")
 
     def transform(self) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
         """Executes the full data processing and joining pipeline.
@@ -58,11 +61,18 @@ class DataProcessing:
             - The processed profile DataFrame with age groups.
 
         """
+        logger.info("Starting data processing transformation pipeline...")
         transactions_processed = self._restructure_transactions(self._transactions)
         profile_processed = self._create_age_groups(self._profile)
+
+        logger.info("Joining processed dataframes...")
         df_joined = self._join_dataframes(
             transactions_processed, profile_processed, self._offers,
         )
+
+        logger.info(f"Final Joined dataframe has {df_joined.count()} rows ")
+
+        logger.info("Data processing transformation pipeline finished")
         return df_joined, self._offers, transactions_processed, profile_processed
 
     @staticmethod
@@ -83,6 +93,7 @@ class DataProcessing:
         """
         # Select and rename fields from the nested 'value' struct.
         # The redundant .drop("value") is removed as .select() already handles this.
+        logger.info("Restructuring transactions: flattening 'value' column.")
         return transactions_df.select(
             col("account_id"),
             col("event"),
@@ -108,13 +119,14 @@ class DataProcessing:
             The profile DataFrame with the new 'age_group' column.
 
         """
+        logger.info("Creating 'age_group' feature in profile DataFrame.")
         return profile_df.withColumn(
             "age_group",
             when((col("age") >= 18) & (col("age") <= 25), "18-25")
             .when((col("age") >= 26) & (col("age") <= 35), "26-35")
             .when((col("age") >= 36) & (col("age") <= 50), "36-50")
             .when(col("age") > 50, "51+")
-            .otherwise("Unknown"),  # BUG FIX: Handles ages under 18 and nulls
+            .otherwise("Unknown"),
         )
 
     @staticmethod
@@ -142,17 +154,21 @@ class DataProcessing:
 
         """
         # Alias the offers DataFrame to join it twice for the different offer ID types
+        logger.debug("Aliasing offers DataFrame for self-join.")
         offers1 = offers.alias("offers1").withColumnRenamed("offer_type", "offer_type_1")
         offers2 = offers.alias("offers2").withColumnRenamed("offer_type", "offer_type_2")
 
         # Join transactions with profiles
+        logger.debug("Joinint transaction with profile.")
         df_joined = transactions.join(
             profile, transactions.account_id == profile.id, "left",
         )
+        logger.debug("Joining with offers on 'offer_completed'.")
         # Join with the first offers alias on the 'offer_completed' key
         df_joined = df_joined.join(
             offers1, offers1.id == df_joined.offer_completed, "left",
         )
+        logger.debug("Joining with offers on 'offer_received_viewed.")
         # Join with the second offers alias on the 'offer_received_viewed' key
         df_joined = df_joined.join(
             offers2, offers2.id == df_joined.offer_received_viewed, "left",

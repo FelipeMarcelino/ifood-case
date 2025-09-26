@@ -1,7 +1,7 @@
 """This module contains the FeatureEngineering class, responsible for transforming
 raw iFood case study data into a feature-rich dataset for modeling.
 """
-
+import logging
 import math
 
 from pyspark.sql import DataFrame
@@ -10,6 +10,7 @@ from pyspark.sql.window import Window
 
 from ifood_case.utils import get_column_types
 
+logger = logging.getLogger(__name__)
 
 class FeatureEngineering:
     """Orchestrates the feature engineering pipeline for the iFood case study.
@@ -37,6 +38,7 @@ class FeatureEngineering:
         self.offers = offers
         self.transactions = transactions
         self.profile = profile
+        logger.info("Feature Engineering class initialized")
 
     def transform(self) -> tuple[DataFrame, list[str], list[str]]:
         """Executes the full feature engineering pipeline.
@@ -53,11 +55,15 @@ class FeatureEngineering:
             - A list of categorical column names.
 
         """
+        logger.info("Starting feature engineering pipeline...")
         target_df = self._create_target_variable()
+        logger.info(f"Target variable created with {target_df.count()} opportunity rows.")
         point_in_time_features_df = self._create_point_in_time_features()
         last_offer_features_df = self._create_last_offer_viewed_feature()
         profile_features_df = self._create_profile_features()
         offer_features_df = self._create_static_offer_features()
+
+        logger.info("Joining all feature sets...")
 
         # Join 1: Base (target) with point-in-time customer features
         final_df = (
@@ -111,7 +117,11 @@ class FeatureEngineering:
             .drop(F.col("o.id"))
         )
 
+        logger.info(f"Final feature DataFrame created with {final_df.count()} rows and {len(final_df.columns)} columns.")
         numerical_columns, categorical_columns = get_column_types(final_df)
+        logger.info(f"Found {len(numerical_columns)} numerical and {len(categorical_columns)} categorical features.")
+
+        logger.info("Feature engineering pipeline completed."   )
 
         return final_df, numerical_columns, categorical_columns
 
@@ -129,6 +139,7 @@ class FeatureEngineering:
             and the binary `target` column.
 
         """
+        logger.info("Creating target variable...")
         bogo_discount_success = (
             self.transactions.filter(F.col("event") == "offer completed")
             .select("account_id", F.col("offer_completed").alias("successful_offer_id"))
@@ -214,6 +225,7 @@ class FeatureEngineering:
             and various point-in-time features.
 
         """
+        logger.info("Creating point-in-time behavioral features")
         window_spec = Window.partitionBy("account_id").orderBy("time_since_test_start")
 
         features_over_time = (
@@ -285,6 +297,7 @@ class FeatureEngineering:
             and the `last_offer_viewed_type` feature.
 
         """
+        logger.info("Creating 'last offer viewed' feature")
         opportunities = self.transactions.filter(F.col("event") == "offer received").select(
             "account_id",
             F.col("offer_received_viewed").alias("offer_id_received"),
@@ -365,6 +378,7 @@ class FeatureEngineering:
             A DataFrame of profile features, keyed by customer `id`.
 
         """
+        logger.info("Creating profile features (age cleaning, cyclical date)....")
         cleaned_profile = self._clean_profile(self.profile)
         profile_with_cyclical = self._create_cyclical_features(cleaned_profile)
 
@@ -389,6 +403,7 @@ class FeatureEngineering:
             A DataFrame of offer features, keyed by offer `id`.
 
         """
+        logger.info("Creating static offer features (one hot encoding, ratios)...")
         # One-hot encode channels
         channels_df = self.offers.select(F.explode("channels").alias("channel"))
         distinct_channels = [row.channel for row in channels_df.distinct().collect()]
@@ -432,6 +447,7 @@ class FeatureEngineering:
             The DataFrame enriched with cyclical date features.
 
         """
+        logger.debug("Calculating cyclical features from registration date.")
         df_with_date = profile_df.withColumn(
             "registration_date",
             F.to_date(F.col("registered_on").cast("string"), "yyyyMMdd"),

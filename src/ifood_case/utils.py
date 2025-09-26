@@ -1,6 +1,7 @@
 """Utility functions used across the project for tasks such as column type
 separation and model evaluation post-processing.
 """
+import logging
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -12,6 +13,8 @@ from pyspark.ml.stat import Correlation
 from pyspark.sql import DataFrame
 
 from ifood_case.evaluator import Evaluator
+
+logger = logging.getLogger(__name__)
 
 
 def get_column_types(
@@ -35,6 +38,7 @@ def get_column_types(
         A tuple containing two lists: (numerical_columns, categorical_columns).
 
     """
+    logger.info("Separating columns by numerical and categorical types...")
     if exclude_cols is None:
         exclude_cols = ["account_id", "offer_id", "time_received", "target", "id"]
 
@@ -53,10 +57,9 @@ def get_column_types(
         elif data_type in categorical_types:
             categorical_columns.append(column_name)
         else:
-            print(
-                f"Column '{column_name}' with type '{data_type}' was not classified.",
-            )
+            logger.warning(f"Column '{column_name}' with type '{data_type}' was not classified.")
 
+    logger.info(f"Found {len(numerical_columns)} numerical and {len(categorical_columns)} categorical columns.")
     return numerical_columns, categorical_columns
 
 
@@ -92,6 +95,7 @@ def find_optimal_threshold(
         threshold, sorted by uplift.
 
     """
+    logger.info("Starting search for optimal financial threshold...")
     thresholds = np.linspace(0.05, 0.95, 19)  # Test thresholds from 5% to 95%
     results = []
 
@@ -119,11 +123,11 @@ def find_optimal_threshold(
     )
     best_threshold_row = results_df.iloc[0]
 
-    print("--- Threshold vs. Uplift Analysis ---")
-    print(results_df.to_string())
+    logger.info("--- Threshold vs. Uplift Analysis ---")
+    logger.info(f"\n{results_df.to_string()}")
 
-    print("\n--- Best Threshold Found ---")
-    print(best_threshold_row)
+    logger.info("--- Best Threshold Found ---")
+    logger.info(f"\n{best_threshold_row}")
 
     return results_df
 
@@ -145,6 +149,7 @@ def plot_correlation_matrix(df: DataFrame, numerical_cols: List[str]) -> None:
         This function displays a matplotlib plot and does not return any value.
 
     """
+    logger.info("Calculating correlation matrix for numerical features...")
     assembler = VectorAssembler(
         inputCols=numerical_cols, outputCol="features_vector", handleInvalid="skip",
     )
@@ -159,7 +164,7 @@ def plot_correlation_matrix(df: DataFrame, numerical_cols: List[str]) -> None:
             corr_matrix_array, columns=numerical_cols, index=numerical_cols,
         )
 
-        # Step 4: Plot the heatmap using Seaborn
+        logger.info("Plotting correlation heatmap...")
         plt.figure(figsize=(16, 12))
         sns.heatmap(
             corr_matrix_pd,
@@ -174,4 +179,4 @@ def plot_correlation_matrix(df: DataFrame, numerical_cols: List[str]) -> None:
         plt.tight_layout()
         plt.show()
     else:
-        print("Could not calculate the correlation matrix.")
+        logger.error("Could not calculate the correlation matrix")

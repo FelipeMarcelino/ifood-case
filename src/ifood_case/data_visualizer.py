@@ -1,6 +1,7 @@
 """This module provides the DataVisualizer class, responsible for creating
 visualizations to gain insights from the iFood case study data.
 """
+import logging
 from typing import NoReturn
 
 import matplotlib.pyplot as plt
@@ -9,7 +10,8 @@ import seaborn as sns
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import coalesce, col, concat_ws, explode, floor, when
 
-# --- Brand Color Constants ---
+logger = logging.getLogger(__name__)
+
 IFOOD_RED = "#EA1D2C"
 IFOOD_BLACK = "#3F3E3E"
 IFOOD_PALETTE = [
@@ -33,16 +35,17 @@ class DataVisualizer:
         Parameters
         ----------
         offers : pyspark.sql.DataFrame
-            [cite_start]DataFrame with offer details (BOGO, informational, discount). [cite: 20, 21, 23]
+            DataFrame with offer details (BOGO, informational, discount). [cite: 20, 21, 23]
         transactions : pyspark.sql.DataFrame
-            [cite_start]DataFrame with the history of transactions and offer interactions. [cite: 35, 36]
+            DataFrame with the history of transactions and offer interactions. [cite: 35, 36]
         profile : pyspark.sql.DataFrame
-            [cite_start]DataFrame with customer demographic data. [cite: 28, 29]
+            DataFrame with customer demographic data. [cite: 28, 29]
         df_joined : pyspark.sql.DataFrame
             A pre-joined DataFrame containing linked data from offers,
             transactions, and profiles.
 
         """
+        logger.info("DataVisualizer class initialized.")
         self.offers = offers
         self.transactions = transactions
         self.profile = profile
@@ -60,11 +63,13 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating bar plots for marketing channels.")
         self.__plot_barplot_channels_joined()
         self.__plot_barplot_channels_separated()
 
     def __plot_barplot_channels_joined(self) -> NoReturn:
         """Plots the count of channel combinations (e.g., 'email, web')."""
+        logger.debug("Plotting channel combinations.")
         channels_pd = (
             self.offers.withColumn("channels_str", concat_ws(", ", col("channels")))
             .groupBy("channels_str")
@@ -84,6 +89,7 @@ class DataVisualizer:
 
     def __plot_barplot_channels_separated(self) -> NoReturn:
         """Plots the count of each individual offer channel."""
+        logger.debug("Plotting individual channels.")
         channels_pd = (
             self.offers.withColumn("channel_exp", explode(col("channels")))
             .groupBy("channel_exp")
@@ -109,6 +115,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating histogram for age distribution.")
         age_pd = self.profile.select(col("age")).toPandas()
 
         plt.figure(figsize=(10, 6))
@@ -127,6 +134,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating histogram for credit card limit distribution.")
         limit_pd = self.profile.select(col("credit_card_limit")).toPandas()
 
         plt.figure(figsize=(10, 6))
@@ -145,6 +153,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating bar plot for gender distribution.")
         gender_pd = (
             self.profile.select(col("gender"))
             .groupBy("gender")
@@ -170,6 +179,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating bar plot for event type distribution.")
         event_pd = (
             self.transactions.select(col("event"))
             .groupBy("event")
@@ -195,6 +205,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating histogram for credit card limit, segmented by age group.")
         limit_age_pd = self.profile.select(
             col("age_group"), col("credit_card_limit"),
         ).toPandas()
@@ -220,6 +231,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating histogram for credit card limit, segmented by gender.")
         limit_gender_pd = (
             self.profile.select(col("gender"), col("credit_card_limit"))
             .na.fill({"gender": "Unknown"})
@@ -251,6 +263,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating plot for offer effectiveness by customer profile.")
         completed_offers_pd = (
             self.df_joined.filter(col("event") == "offer completed")
             .withColumn("offer_type_union", coalesce("offer_type_1", "offer_type_2"))
@@ -297,6 +310,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating plot for conversion rate by marketing channel.")
         viewed_counts = (
             self.transactions.filter(col("event") == "offer viewed")
             .groupBy("offer_received_viewed")
@@ -371,6 +385,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating plot for transaction value by offer usage.")
         users_who_completed = (
             self.transactions.filter(col("event") == "offer completed")
             .select("account_id")
@@ -412,6 +427,7 @@ class DataVisualizer:
         None
 
         """
+        logger.info("Generating plot for the impact of informational offers.")
         informational_offer_ids = [
             row.id
             for row in self.offers.filter(col("offer_type") == "informational")
@@ -506,7 +522,7 @@ class DataVisualizer:
         None
 
         """
-        print("Starting temporal engagement analysis by profile...")
+        logger.info("Generating time-series plot for offer engagement by profile.")
 
         offer_events = self.df_joined.filter(
             col("event").isin("offer viewed", "offer completed"),
