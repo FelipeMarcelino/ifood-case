@@ -8,12 +8,13 @@ import logging
 import os
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
 import pandas as pd
 from pyspark.sql import DataFrame, SparkSession
+from sklearn.pipeline import Pipeline
 
 from ifood_case.data_processing import DataProcessing
 from ifood_case.evaluator import Evaluator
@@ -43,10 +44,10 @@ class TrainingPipeline:
         self.spark = spark
         self.project_root = Path(__file__).resolve().parent.parent.parent
         self.data_path = self.project_root / data_path
-        self.feature_engineer: FeatureEngineering = None
-        self.data_processing: DataProcessing = None
-        self.model_trainer: ModelTrainer = None
-        self.evaluator: Evaluator = None
+        self.feature_engineer: Optional[FeatureEngineering] = None
+        self.data_processing: Optional[DataProcessing] = None
+        self.model_trainer: Optional[ModelTrainer] = None
+        self.evaluator: Optional[Evaluator] = None
         self.numerical_cols: List[str] = []
         self.categorical_cols: List[str] = []
 
@@ -183,7 +184,7 @@ class TrainingPipeline:
         if not os.path.exists(model_path) or not os.path.exists(calibrator_path):
             raise FileNotFoundError("Model or calibrator file not found. Please train the model first.")
 
-        model = joblib.load(model_path)
+        model: Pipeline = joblib.load(model_path)
         calibrator = joblib.load(calibrator_path)
 
         logger.info("Making predictions on new data...")
@@ -194,4 +195,9 @@ class TrainingPipeline:
         final_probabilities = np.vstack([1 - calibrated_probs_pos, calibrated_probs_pos]).T
         logger.info("Prediction complete.")
 
-        return final_probabilities
+        preprocessor = model.named_steps["preprocess"]
+        input_data_transformed = preprocessor.transform(input_data)
+
+        features_names = preprocessor.get_feature_names_out()
+
+        return final_probabilities, model.named_steps["classifier"], input_data_transformed, features_names
