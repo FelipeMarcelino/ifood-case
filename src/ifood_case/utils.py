@@ -2,6 +2,7 @@
 separation and model evaluation post-processing.
 """
 import logging
+import math
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -180,3 +181,43 @@ def plot_correlation_matrix(df: DataFrame, numerical_cols: List[str]) -> None:
         plt.show()
     else:
         logger.error("Could not calculate the correlation matrix")
+
+def create_cyclical_features_pandas(df: pd.DataFrame, date_column: str) -> pd.DataFrame:
+    """Creates cyclical sine/cosine features from a date column in a Pandas DataFrame.
+
+    This is a utility function to ensure the same feature logic is applied
+    during both training and prediction.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The input Pandas DataFrame.
+    date_column : str
+        The name of the column containing the date information (e.g., 'registered_on').
+        The date format is expected to be YYYYMMDD.
+
+    Returns
+    -------
+    pd.DataFrame
+        The DataFrame enriched with cyclical date features (month_sin, month_cos, etc.).
+
+    """
+    # Create a copy to avoid modifying the original DataFrame
+    df_copy = df.copy()
+
+    # 1. Convert the column to datetime objects
+    # The format %Y%m%d matches integers like 20170212
+    date_series = pd.to_datetime(df_copy[date_column], format="%Y%m%d")
+
+    # 2. Extract cyclical components
+    # Pandas dayofweek: Monday=0, Sunday=6. Add 1 to match PySpark's Sunday=1.
+    dayofweek = date_series.dt.dayofweek + 1
+    month = date_series.dt.month
+
+    # 3. Apply sine/cosine transformation
+    df_copy["month_sin"] = np.sin(2 * math.pi * month / 12)
+    df_copy["month_cos"] = np.cos(2 * math.pi * month / 12)
+    df_copy["dayofweek_sin"] = np.sin(2 * math.pi * dayofweek / 7)
+    df_copy["dayofweek_cos"] = np.cos(2 * math.pi * dayofweek / 7)
+
+    return df_copy
